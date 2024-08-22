@@ -68,7 +68,7 @@ public struct SwipeCellActionItem: Identifiable {
 /// Swipe Cell Settings
 public struct SwipeCellSettings {
     /// initializer
-    public init(openTriggerValue: CGFloat = 60, swipeOutTriggerRatio: CGFloat =  0.7, addWidthMargin: CGFloat = 5 ){
+    public init(openTriggerValue: CGFloat = 75, swipeOutTriggerRatio: CGFloat =  0.25, addWidthMargin: CGFloat = 5 ){
         self.openTriggerValue = openTriggerValue
         self.swipeOutTriggerRatio = swipeOutTriggerRatio
         self.addWidthMargin = addWidthMargin

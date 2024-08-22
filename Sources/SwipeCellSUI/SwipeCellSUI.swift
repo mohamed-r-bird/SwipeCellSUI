@@ -13,28 +13,39 @@ public struct SwipeCellModifier: ViewModifier {
     @State private var offsetX: CGFloat = 0
     
     let generator = UINotificationFeedbackGenerator()
-    @State private var hapticFeedbackOccurred: Bool = false
+    @State private var positiveHapticFeedbackOccurred: Bool = false
+    @State private var negativeHapticFeedbackOccurred: Bool = false
     @State private var openSideLock: SwipeGroupSide?
 
     public func body(content: Content) -> some View {
 
             ZStack {
-                
-                if self.leadingSideGroup.isEmpty == false && self.offsetX != 0 {
-                    self.swipeToRevealArea(swipeItemGroup: self.leadingSideGroup, side: .leading)
+                if self.offsetX != 0 {
+                    self.swipeToRevealArea(swipeItemGroup: self.leadingSideGroup)
                 }
-                
-                if self.trailingSideGroup.isEmpty == false && self.offsetX != 0 {
-                    self.swipeToRevealArea(swipeItemGroup: self.trailingSideGroup, side: .trailing)
-                }
-                
+
                 content
                     .offset(x: self.offsetX)
-                    .gesture(DragGesture(minimumDistance: 30, coordinateSpace: .local).onChanged(self.dragOnChanged(value:)).onEnded(dragOnEnded(value:)))
-                    
-            }.frame(width: cellWidth)
+                Rectangle()
+                    .contentShape(Rectangle())
+                    .foregroundColor(.clear)
+                    .padding(.leading, 50)
+                    .gesture(
+                        DragGesture(
+                            minimumDistance: 30,
+                            coordinateSpace: .local)
+                        .onChanged(self.dragOnChanged(value:))
+                        .onEnded(dragOnEnded(value:)))
+            }
+            .frame(width: cellWidth)
             .edgesIgnoringSafeArea(.horizontal)
             .clipped()
+            .shadow(
+                color: offsetX == 0 ? .clear : Color.black.opacity(0.25),
+                radius: 4,
+                x: 0,
+                y: 0
+            )
             .onChange(of: self.currentUserInteractionCellID) { (_) in
                 if let currentDragCellID = self.currentUserInteractionCellID, currentDragCellID != self.id && self.openSideLock != nil {
                     // if this cell has an open side area and is not the cell being dragged, close the cell
@@ -47,54 +58,54 @@ public struct SwipeCellModifier: ViewModifier {
     }
     
     
-    internal func swipeToRevealArea(swipeItemGroup: [SwipeCellActionItem], side:SwipeGroupSide)->some View {
+    internal func swipeToRevealArea(swipeItemGroup: [SwipeCellActionItem])->some View {
     
             HStack {
-                if side == .trailing {
-                    Spacer()
-                }
                 ZStack {
-//                    swipeItem.backgroundColor.frame(width: self.revealAreaWidth(side: side))
                         HStack(spacing:0) {
                           ForEach(swipeItemGroup) { item in
-                        
                             Button {
                                 self.setOffsetX(value: 0)
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     item.actionCallback()
                                 }
                             } label: {
-                                self.buttonContentView(item: item, group: swipeItemGroup, side: side)
-                            }.buttonStyle(BorderlessButtonStyle())
-
+                                self.buttonContentView(item: item, group: swipeItemGroup, side: .leading)
+                            }
+                            .buttonStyle(BorderlessButtonStyle())
+                            .opacity(offsetX > 0 ? 1 : 0)
                         }
-                    }
-                }.opacity(self.swipeRevealAreaOpacity(side: side))
-    
-                    if side == .leading {
-                        Spacer()
-                    }
-            }
-        
-    }
-    
-    internal func buttonContentView(item:SwipeCellActionItem, group: [SwipeCellActionItem], side: SwipeGroupSide)->some View {
-        ZStack {
-                item.backgroundColor
-                
-                HStack {
-                    if self.warnSwipeOutCondition(side: side, hasSwipeOut: item.swipeOutAction) && item.swipeOutButtonView != nil {
-                        item.swipeOutButtonView!()
-                    } else {
-                        item.buttonView()
+                            Spacer()
+                            ForEach(swipeItemGroup) { item in
+                              Button {
+                                  self.setOffsetX(value: 0)
+                                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                      item.actionCallback()
+                                  }
+                              } label: {
+                                  self.buttonContentView(item: item, group: swipeItemGroup, side: .trailing)
+                              }
+                              .buttonStyle(BorderlessButtonStyle())
+                              .opacity(offsetX < 0 ? 1 : 0)
+                          }
                     }
                 }
-        
-        }.frame(width: self.itemButtonWidth(item: item, itemGroup: group, side: side))
+            }
+            .background(swipeItemGroup.first?.backgroundColor ?? .clear)
+    }
+
+    internal func buttonContentView(item:SwipeCellActionItem, group: [SwipeCellActionItem], side: SwipeGroupSide) -> some View {
+        ZStack {
+                HStack {
+                    item.buttonView()
+                        .scaleEffect(positiveHapticFeedbackOccurred ? 1.5 : 1.0)
+                        .animation(.bouncy, value: positiveHapticFeedbackOccurred ? 0.01 : 0)
+                }
+        }
+        .frame(width: 75)
+        .background(item.backgroundColor)
     }
     
-    
-
     
     internal func menuWidth(side: SwipeGroupSide)->CGFloat {
         switch side {
@@ -141,7 +152,7 @@ public struct SwipeCellModifier: ViewModifier {
     
     internal func dragOnEnded(value: DragGesture.Value) {
         
-       let swipeOutTriggerValue =  self.cellWidth * self.settings.swipeOutTriggerRatio
+       let swipeOutTriggerValue = self.settings.openTriggerValue
 
         if self.offsetX == 0 {
             self.openSideLock = nil
@@ -198,11 +209,22 @@ public struct SwipeCellModifier: ViewModifier {
     internal func triggerHapticFeedbackIfNeeded(horizontalTranslation: CGFloat) {
         let side: SwipeGroupSide = horizontalTranslation > 0 ? .leading : .trailing
         let group = side == .leading ? self.leadingSideGroup : self.trailingSideGroup
-      //  let triggerValue  = self.cellWidth * self.settings.swipeOutTriggerRatio
+        let triggerValue  = self.settings.openTriggerValue
+        let offsetPassed: Bool = side == .leading ? (horizontalTranslation > triggerValue) : (horizontalTranslation < -triggerValue)
         let swipeOutActionCondition = self.warnSwipeOutCondition(side: side, hasSwipeOut: true)
-        if let item = self.swipeOutItemWithHapticFeedback(group: group), self.hapticFeedbackOccurred == false, swipeOutActionCondition  == true {
-            self.generator.notificationOccurred(item.swipeOutHapticFeedbackType!)
-            self.hapticFeedbackOccurred = true
+        
+        if let item = self.swipeOutItemWithHapticFeedback(group: group),
+            !self.positiveHapticFeedbackOccurred,
+           swipeOutActionCondition,
+           offsetPassed {
+            generator.notificationOccurred(item.swipeOutHapticFeedbackType!)
+            positiveHapticFeedbackOccurred = true
+            negativeHapticFeedbackOccurred = false
+            return
+        } else if positiveHapticFeedbackOccurred, !negativeHapticFeedbackOccurred, warnSwipeInCondition(side: side, hasSwipeOut: true) {
+            negativeHapticFeedbackOccurred = true
+            positiveHapticFeedbackOccurred = false
+            generator.notificationOccurred(.success)
         }
     }
     
@@ -237,26 +259,27 @@ public struct SwipeCellModifier: ViewModifier {
         
         self.setOffsetX(value:  side.sideFactor * self.menuWidth(side: side))
         self.openSideLock = side
-        self.hapticFeedbackOccurred = false
+        self.positiveHapticFeedbackOccurred = false
     }
 
 
     
     internal func setOffsetX(value: CGFloat) {
-        withAnimation(.spring()) {
+        withAnimation(.easeOut(duration: 0.2)) {
             self.offsetX = value
         }
         if self.offsetX == 0 {
             self.openSideLock = nil
-            self.hapticFeedbackOccurred = false
+            self.positiveHapticFeedbackOccurred = false
+            self.currentUserInteractionCellID = nil
         }
     }
 
     
-    internal func itemButtonWidth(item: SwipeCellActionItem, itemGroup: [SwipeCellActionItem],  side: SwipeGroupSide)->CGFloat {
+    internal func itemButtonWidth(item: SwipeCellActionItem, itemGroup: [SwipeCellActionItem],  side: SwipeGroupSide) -> CGFloat {
       //  let defaultWidth = (self.offsetX.magnitude + addWidthMargin) / CGFloat(itemGroup.count)
         let dynamicButtonWidth = self.dynamicButtonWidth(item: item, itemCount:itemGroup.count, side: side)
-        let triggerValue  = self.cellWidth * settings.swipeOutTriggerRatio
+        let triggerValue  = settings.openTriggerValue
         let swipeOutActionCondition = side == .leading ?  self.offsetX > triggerValue  : self.offsetX < -triggerValue
         
         if item.swipeOutAction && swipeOutActionCondition {
@@ -283,11 +306,17 @@ public struct SwipeCellModifier: ViewModifier {
         if hasSwipeOut == false {
             return false
         }
-        let triggerValue  = self.cellWidth * settings.swipeOutTriggerRatio
+        let triggerValue  = settings.openTriggerValue
         return (side == .trailing && self.offsetX < -triggerValue) || (side == .leading && self.offsetX > triggerValue)
-
     }
-    
+
+    internal func warnSwipeInCondition(side: SwipeGroupSide, hasSwipeOut: Bool)->Bool {
+        if hasSwipeOut == false {
+            return false
+        }
+        let triggerValue  = settings.openTriggerValue
+        return (side == .trailing && self.offsetX > -triggerValue) || (side == .leading && self.offsetX < triggerValue)
+    }
 
     internal func swipeRevealAreaOpacity(side: SwipeGroupSide)->Double {
         switch side {
