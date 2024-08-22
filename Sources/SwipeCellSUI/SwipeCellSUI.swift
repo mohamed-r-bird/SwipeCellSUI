@@ -32,7 +32,7 @@ public struct SwipeCellModifier: ViewModifier {
                     .padding(.leading, 50)
                     .gesture(
                         DragGesture(
-                            minimumDistance: 15,
+                            minimumDistance: 20,
                             coordinateSpace: .local)
                         .onChanged(self.dragOnChanged(value:))
                         .onEnded(dragOnEnded(value:)))
@@ -250,6 +250,7 @@ public struct SwipeCellModifier: ViewModifier {
       
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             item.actionCallback()
+            self.setOffsetX(value: 0)
         }
     }
     
