@@ -12,7 +12,7 @@ public struct SwipeCellModifier: ViewModifier {
     
     @State private var offsetX: CGFloat = 0
     
-    let generator = UINotificationFeedbackGenerator()
+    let generator = UIImpactFeedbackGenerator(style: .light)
     @State private var positiveHapticFeedbackOccurred: Bool = false
     @State private var negativeHapticFeedbackOccurred: Bool = false
     @State private var openSideLock: SwipeGroupSide?
@@ -217,22 +217,20 @@ public struct SwipeCellModifier: ViewModifier {
             !self.positiveHapticFeedbackOccurred,
            swipeOutActionCondition,
            offsetPassed {
-            generator.notificationOccurred(item.swipeOutHapticFeedbackType!)
+            generator.impactOccurred()
             positiveHapticFeedbackOccurred = true
             negativeHapticFeedbackOccurred = false
             return
         } else if positiveHapticFeedbackOccurred, !negativeHapticFeedbackOccurred, warnSwipeInCondition(side: side, hasSwipeOut: true) {
             negativeHapticFeedbackOccurred = true
             positiveHapticFeedbackOccurred = false
-            generator.notificationOccurred(.success)
+            generator.impactOccurred()
         }
     }
     
     internal func swipeOutItemWithHapticFeedback(group: [SwipeCellActionItem])->SwipeCellActionItem? {
-        if let item = group.filter({$0.swipeOutAction == true}).first {
-            if item.swipeOutHapticFeedbackType != nil {
-                return item
-            }
+        if let item = group.filter({$0.swipeOutAction == true}).first {    
+            return item
         }
         return nil
     }

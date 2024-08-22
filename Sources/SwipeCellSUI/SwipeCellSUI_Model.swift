@@ -33,7 +33,6 @@ public struct SwipeCellActionItem: Identifiable {
     public var buttonWidth: CGFloat
     public var backgroundColor: Color
     public var swipeOutAction: Bool
-    public var swipeOutHapticFeedbackType: UINotificationFeedbackGenerator.FeedbackType?
     public var swipeOutIsDestructive: Bool
    // public var swipeOutButtonViewScaleFactor: CGFloat
     public var actionCallback: ()->()
@@ -46,17 +45,15 @@ public struct SwipeCellActionItem: Identifiable {
      - Parameter  buttonWidth: Width of the button. The the open side menu width is calculated from the sum of all button widths. Default is 75.
      - Parameter backgroundColor: The background colour of the the menu button.
      - Parameter swipeOutAction: A Boolean that determines if a swipe out action is activated or not. Default is false.
-    - Parameter swipeOutHapticFeedbackType: If a swipeOutAction is activated, a haptic feedback will occur after the swipe out threshold is passed. Default is nil.
     - Parameter swipeOutIsDestructive: A Boolean that determines if the swipe out is destructive. If true, the content cell view will be "move out of sight" once the swipe out is triggered.
     */
-    public init(id: String = UUID().uuidString, buttonView: @escaping ()->AnyView, swipeOutButtonView: (()->AnyView)? = nil, buttonWidth: CGFloat = 75, backgroundColor: Color, swipeOutAction: Bool = false, swipeOutHapticFeedbackType: UINotificationFeedbackGenerator.FeedbackType? = nil, swipeOutIsDestructive: Bool = true, actionCallback: @escaping ()->() ){
+    public init(id: String = UUID().uuidString, buttonView: @escaping ()->AnyView, swipeOutButtonView: (()->AnyView)? = nil, buttonWidth: CGFloat = 75, backgroundColor: Color, swipeOutAction: Bool = false, swipeOutIsDestructive: Bool = true, actionCallback: @escaping ()->() ){
         self.id = id
         self.buttonView = buttonView
         self.swipeOutButtonView = swipeOutButtonView
         self.buttonWidth = buttonWidth
         self.backgroundColor = backgroundColor
         self.swipeOutAction = swipeOutAction
-        self.swipeOutHapticFeedbackType = swipeOutHapticFeedbackType
         self.swipeOutIsDestructive = swipeOutIsDestructive
         self.actionCallback = actionCallback
         
