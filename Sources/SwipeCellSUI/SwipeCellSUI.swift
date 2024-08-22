@@ -32,7 +32,7 @@ public struct SwipeCellModifier: ViewModifier {
                     .padding(.leading, 50)
                     .gesture(
                         DragGesture(
-                            minimumDistance: 20,
+                            minimumDistance: 30,
                             coordinateSpace: .local)
                         .onChanged(self.dragOnChanged(value:))
                         .onEnded(dragOnEnded(value:)))
